@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} - {{ app_title }}</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="theme-{{ current_theme }}">
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('dashboard') }}" class="brand-link">
+                    <div class="brand-icon">📚</div>
+                    <div class="brand-info">
+                        <span class="brand-title">LibraryMS</span>
+                        <span class="brand-badge">PRO</span>
+                    </div>
+                </a>
+                <button class="mobile-close-btn" id="sidebarCloseBtn" aria-label="Close menu">&times;</button>
+            </div>
+
+            <div class="sidebar-project-tag">
+                <div class="tag-title">College Project</div>
+                <div class="tag-student">{{ student_name }}</div>
+                <div class="tag-roll">Roll: {{ student_roll }}</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">MAIN NAVIGATION</div>
+                
+                <a href="{{ url_for('dashboard') }}" class="nav-item {% if current_endpoint == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+
+                <a href="{{ url_for('books_list') }}" class="nav-item {% if 'books' in current_endpoint %}active{% endif %}">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">Books Catalog</span>
+                </a>
+
+                <a href="{{ url_for('members_list') }}" class="nav-item {% if 'members' in current_endpoint %}active{% endif %}">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">Members</span>
+                </a>
+
+                <div class="nav-section-label">CIRCULATION</div>
+
+                <a href="{{ url_for('issue_book') }}" class="nav-item {% if current_endpoint == 'issue_book' %}active{% endif %}">
+                    <span class="nav-icon">📤</span>
+                    <span class="nav-label">Issue Book</span>
+                </a>
+
+                <a href="{{ url_for('return_book') }}" class="nav-item {% if current_endpoint == 'return_book' %}active{% endif %}">
+                    <span class="nav-icon">📥</span>
+                    <span class="nav-label">Return Book</span>
+                </a>
+
+                <a href="{{ url_for('transactions_list') }}" class="nav-item {% if current_endpoint == 'transactions_list' %}active{% endif %}">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">Transactions</span>
+                </a>
+
+                <div class="nav-section-label">SYSTEM</div>
+
+                <a href="{{ url_for('settings') }}" class="nav-item {% if current_endpoint == 'settings' %}active{% endif %}">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Settings</span>
+                </a>
+
+                <div class="nav-section-label">ACCOUNT</div>
+
+                <a href="{{ url_for('logout') }}" class="nav-item nav-item-logout" title="Sign out of system">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-label">Logout</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">SQLite Connected</span>
+                </div>
+                <div class="system-fine-rate">Fine Rate: {{ currency_symbol }}{{ "%.2f"|format(fine_per_day) }}/day</div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+            <!-- Top Navbar / Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="menu-toggle-btn" id="sidebarToggleBtn" aria-label="Toggle navigation">
+                        <span class="hamburger-bar"></span>
+                        <span class="hamburger-bar"></span>
+                        <span class="hamburger-bar"></span>
+                    </button>
+                    <div class="header-breadcrumbs">
+                        <span class="breadcrumb-app">Library Management System</span>
+                        <span class="breadcrumb-separator">/</span>
+                        <span class="breadcrumb-current">{% block page_name %}Dashboard{% endblock %}</span>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <!-- Quick Theme Toggle -->
+                    <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Dark/Light Mode">
+                        <span class="theme-icon-dark">🌙</span>
+                        <span class="theme-icon-light">☀️</span>
+                        <span class="theme-label" id="themeLabel">Theme</span>
+                    </button>
+
+                    <!-- Quick Issue Shortcut -->
+                    <a href="{{ url_for('issue_book') }}" class="header-btn header-btn-primary" title="Issue a book">
+                        <span>+ Issue Book</span>
+                    </a>
+
+                    <!-- User Profile Badge -->
+                    <div class="user-profile-badge">
+                        <div class="avatar-circle">
+                            {{ (current_user.username[:2]|upper) if current_user else 'AD' }}
+                        </div>
+                        <div class="user-details">
+                            <span class="user-name">{{ current_user.username if current_user else 'Administrator' }}</span>
+                            <span class="user-role">{{ student_name }} ({{ student_roll }})</span>
+                        </div>
+                    </div>
+
+                    <!-- Visible Logout Button -->
+                    <a href="{{ url_for('logout') }}" class="header-btn header-btn-logout" title="Sign out of system">
+                        <span class="logout-icon">🚪</span>
+                        <span class="logout-text">Logout</span>
+                    </a>
+                </div>
+            </header>
+
+            <!-- Page Body -->
+            <main class="content-container">
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flash-messages-container" id="flashContainer">
+                            {% for category, message in messages %}
+                                <div class="flash-alert flash-{{ category }}" role="alert">
+                                    <div class="flash-icon">
+                                        {% if category == 'success' %}✓
+                                        {% elif category == 'danger' %}⚠️
+                                        {% elif category == 'warning' %}🔔
+                                        {% else %}ℹ️{% endif %}
+                                    </div>
+                                    <div class="flash-content">{{ message }}</div>
+                                    <button type="button" class="flash-close-btn" onclick="this.parentElement.remove()" aria-label="Close message">&times;</button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Main Content Block -->
+                {% block content %}
+                {% if error_title %}
+                    <div class="card error-card text-center p-5">
+                        <h2 class="text-danger">{{ error_title }}</h2>
+                        <p class="text-muted mt-2">{{ error_message }}</p>
+                        <div class="mt-4">
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Return to Dashboard</a>
+                        </div>
+                    </div>
+                {% endif %}
+                {% endblock %}
+            </main>
+
+            <!-- Footer -->
+            <footer class="app-footer">
+                <div class="footer-left">
+                    <span>© {{ now_year }} {{ app_title }}</span>
+                    <span class="footer-dot">•</span>
+                    <span>Designed for Academic Excellence</span>
+                </div>
+                <div class="footer-right">
+                    <span>Student: <strong>{{ student_name }}</strong></span>
+                    <span class="footer-dot">•</span>
+                    <span>Roll No: <strong>{{ student_roll }}</strong></span>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Generic Confirmation Modal -->
+    <div class="modal-backdrop" id="genericModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Confirm Action</h3>
+                <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                Are you sure you want to proceed?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <form id="modalForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger" id="modalConfirmBtn">Confirm</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Book Modal -->
+    <div class="modal-backdrop" id="returnModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">Return Book Confirmation</h3>
+                <button type="button" class="modal-close" onclick="closeReturnModal()">&times;</button>
+            </div>
+            <form id="returnForm" method="POST">
+                <div class="modal-body">
+                    <p class="mb-3">Confirm returning book: <strong id="returnBookTitle"></strong></p>
+                    <p class="text-muted mb-3">Issued to: <strong id="returnMemberName"></strong></p>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="modalReturnDate">Return Date (YYYY-MM-DD):</label>
+                        <input type="date" name="return_date" id="modalReturnDate" class="form-control" required>
+                    </div>
+                    <div id="returnFineNotice" class="fine-preview-box" style="display: none;">
+                        <span class="fine-notice-icon">⚠️</span>
+                        <span id="returnFineText"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeReturnModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">Confirm Return</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Global Client Script -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
