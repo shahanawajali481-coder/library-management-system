@@ -1,3 +1,3 @@
 """
-UI package for Library Management System.
+View modules for Library Management System.
 """
