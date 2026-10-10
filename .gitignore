@@ -26,3 +26,14 @@ htmlcov/
 # Local SQLite databases
 database/*.db
 *.sqlite3
+# Local runtime files and private library data
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+library.db
+database/*.db
+*.sqlite
+*.sqlite3
+.env
+

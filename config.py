@@ -16,7 +16,9 @@ except (ImportError, ModuleNotFoundError):
 # Base Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE_DIR, "database")
-DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(DB_DIR, "library.db"))
+# Keep the bundled database as the default so existing project data is preserved.
+# Set DATABASE_PATH in deployment environments to use a persistent mounted volume.
+DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, "library.db"))
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
 # Student Project Information

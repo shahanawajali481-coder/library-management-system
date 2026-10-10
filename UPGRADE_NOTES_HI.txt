@@ -1,0 +1,22 @@
+LIBRARYMS PRO - UPGRADE NOTES (HINDI)
+
+Is ZIP mein aapke existing project ke saath ye upgrades hain:
+1. Settings se database ka .db backup download.
+2. Database restore: upload ki gayi file ka SQLite integrity aur required tables check honge. Restore se pehle current database ki safety copy banegi.
+3. Reports CSV, Excel (.xlsx), aur PDF format mein export.
+4. Barcode scanner support: USB barcode scanner agar ISBN ko keyboard ki tarah type karta hai, to Books Catalog ke ISBN search box mein scan karke search kar sakte hain. Camera-based barcode scanning is package mein nahi hai.
+
+WINDOWS PAR CHALANE KE STEPS
+1. ZIP ko Extract All karein.
+2. library-management-system-main folder kholein.
+3. Address bar mein cmd type karke Enter dabayein (ya terminal us folder mein kholein).
+4. Run karein: py -m venv .venv
+5. Run karein: .venv\Scripts\activate
+6. Run karein: pip install -r requirements.txt
+7. Run karein: py app.py
+8. Browser mein http://127.0.0.1:5000 kholein.
+
+IMPORTANT
+- Restore karne se pehle hamesha backup bana lein.
+- Default login agar aapke original database mein badla nahi gaya ho to README mein diye gaye credentials dekhein. Apna existing login use karein.
+- Database restore aur PDF/Excel export ko yahan is environment mein end-to-end run karke verify nahi kiya ja saka, kyunki Flask installed nahi tha. Dependencies install karke pehle local backup aur exports test karein.

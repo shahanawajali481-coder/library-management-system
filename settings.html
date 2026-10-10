@@ -124,8 +124,8 @@
     <div class="card mt-4">
         <div class="card-header">
             <div>
-                <h2 class="card-title">📊 Export CSV Reports</h2>
-                <p class="card-subtitle">Download live spreadsheets for audit, inventory reconciliation, or administration.</p>
+                <h2 class="card-title">📊 Export Reports (CSV / Excel / PDF)</h2>
+                <p class="card-subtitle">Download live reports as CSV, Excel workbooks, or PDF documents.</p>
             </div>
         </div>
 
@@ -133,39 +133,66 @@
             <div class="report-box">
                 <div class="report-title">📚 Complete Book Catalog</div>
                 <div class="report-desc">All books with ISBN, title, author, category, total stock, and available copies.</div>
-                <a href="{{ url_for('export_transactions', type='All Books') }}" class="btn btn-sm btn-secondary mt-2">Export CSV</a>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='All Books', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='All Books', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='All Books', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
             </div>
 
             <div class="report-box">
                 <div class="report-title">✅ Available Books Inventory</div>
                 <div class="report-desc">In-stock books ready to be loaned out to students and faculty.</div>
-                <a href="{{ url_for('export_transactions', type='Available Books') }}" class="btn btn-sm btn-secondary mt-2">Export CSV</a>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='Available Books', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='Available Books', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='Available Books', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
             </div>
 
             <div class="report-box">
                 <div class="report-title">📤 Active Issued Loans</div>
                 <div class="report-desc">All unreturned books with borrower names, issue dates, and due dates.</div>
-                <a href="{{ url_for('export_transactions', type='Issued Books') }}" class="btn btn-sm btn-secondary mt-2">Export CSV</a>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='Issued Books', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='Issued Books', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='Issued Books', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
             </div>
 
             <div class="report-box">
                 <div class="report-title">⚠️ Overdue Loans Report</div>
                 <div class="report-desc">Delinquent loans with accrued overdue days and fine amounts.</div>
-                <a href="{{ url_for('export_transactions', type='Overdue Books') }}" class="btn btn-sm btn-secondary mt-2">Export CSV</a>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='Overdue Books', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='Overdue Books', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='Overdue Books', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
             </div>
 
             <div class="report-box">
                 <div class="report-title">👥 All Registered Members</div>
                 <div class="report-desc">Member directory with IDs, names, phones, and email addresses.</div>
-                <a href="{{ url_for('export_transactions', type='All Members') }}" class="btn btn-sm btn-secondary mt-2">Export CSV</a>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='All Members', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='All Members', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='All Members', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
             </div>
 
             <div class="report-box">
                 <div class="report-title">💰 Fine Collection Ledger</div>
                 <div class="report-desc">Comprehensive ledger of collected and outstanding library fines.</div>
-                <a href="{{ url_for('export_transactions', type='Fine Collection') }}" class="btn btn-sm btn-secondary mt-2">Export CSV</a>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='Fine Collection', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='Fine Collection', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='Fine Collection', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
             </div>
         </div>
+    </div>
+
+
+    <!-- Database Backup & Restore -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">🛡️ Database Backup & Restore</h2>
+                <p class="card-subtitle">Download a safe SQLite backup before major changes. Restore only a backup from this LibraryMS project.</p>
+            </div>
+        </div>
+        <div class="reports-export-grid">
+            <div class="report-box">
+                <div class="report-title">⬇️ Create Backup</div>
+                <div class="report-desc">Download a consistent copy of books, members, users, settings, and transactions.</div>
+                <a href="{{ url_for('download_database_backup') }}" class="btn btn-primary mt-2">Download Database Backup</a>
+            </div>
+            <div class="report-box">
+                <div class="report-title">⬆️ Restore Backup</div>
+                <div class="report-desc">The uploaded database is validated before restore. The current database is copied to a pre-restore backup first.</div>
+                <form method="POST" action="{{ url_for('restore_database_backup') }}" enctype="multipart/form-data" class="mt-2" onsubmit="return confirm('Restore this backup? The current database will be replaced, and a safety copy will be kept.');">
+                    <input type="file" name="backup_file" accept=".db,.sqlite,.sqlite3,application/octet-stream" required class="form-control" aria-label="Choose SQLite backup">
+                    <button type="submit" class="btn btn-secondary mt-2">Validate & Restore</button>
+                </form>
+            </div>
+        </div>
+        <p class="text-muted mt-2" style="font-size:0.9rem">Tip: a USB barcode scanner that types the ISBN works with the existing ISBN search field in Books Catalog.</p>
     </div>
 
 </div>

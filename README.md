@@ -255,3 +255,13 @@ The project is structured and configured to be deployed online to any cloud plat
 - **Project Title:** Library Management System (LMS)
 - **Course / Degree:** Bachelor of Technology / Computer Science & Engineering
 - **Academic Year:** 2026
+
+## Recent upgrade: Reports and Database Safety
+
+- Export supported reports as CSV, Excel (`.xlsx`), or PDF from Settings.
+- Create a consistent SQLite database backup from Settings.
+- Restore a backup only after SQLite integrity and required LibraryMS tables are validated. The current database is copied to `library.db.pre_restore_backup` (or the configured database path plus `.pre_restore_backup`) before restore.
+- A USB barcode scanner that types the scanned ISBN can be used with the existing ISBN search field in Books Catalog; camera-based scanning is not included.
+
+Install the updated dependencies with `pip install -r requirements.txt`. Back up your database before restoring any file.
+

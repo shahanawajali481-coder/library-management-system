@@ -6,6 +6,11 @@ College Project | Flask + SQLite + Vanilla CSS & JS
 
 import os
 import sys
+import io
+import csv
+import sqlite3
+import tempfile
+import shutil
 from datetime import datetime
 from flask import (
     Flask,
@@ -16,7 +21,8 @@ from flask import (
     flash,
     jsonify,
     Response,
-    session
+    session,
+    send_file
 )
 
 from config import (
@@ -38,7 +44,9 @@ from services.settings_service import SettingsService
 # Initialize Flask application
 app = Flask(__name__)
 # Secure secret key for session management and flash messages
-app.secret_key = os.environ.get("SECRET_KEY", "lms_secure_secret_key_2026_shahanawaj")
+# Set SECRET_KEY in production; the fallback is only for local development.
+app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32)
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # Limit uploaded database backups to 50 MB
 
 
 # Context Processor to inject global variables into all Jinja templates
@@ -534,22 +542,155 @@ def transactions_list():
 
 @app.route("/transactions/export")
 def export_transactions():
+    """Export any supported report as CSV, Excel, or PDF."""
     report_type = request.args.get("type", "All Books")
+    export_format = request.args.get("format", "csv").lower()
     headers, rows = TransactionService.get_reports_data(report_type)
+    safe_name = "_".join(report_type.lower().split())
+    stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    import io
-    import csv
-    output = io.StringIO()
+    if export_format in ("xlsx", "excel"):
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+            from openpyxl.utils import get_column_letter
+        except ImportError:
+            flash("Excel export requires openpyxl. Install dependencies from requirements.txt.", "error")
+            return redirect(url_for("settings"))
+        output = io.BytesIO()
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = report_type[:31] or "Report"
+        sheet.append(headers)
+        for row in rows:
+            sheet.append([str(value) if value is not None else "" for value in row])
+        for cell in sheet[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="1D4ED8")
+            cell.alignment = Alignment(wrap_text=True)
+        sheet.freeze_panes = "A2"
+        sheet.auto_filter.ref = sheet.dimensions
+        for column_cells in sheet.columns:
+            max_len = min(max(len(str(c.value or "")) for c in column_cells) + 2, 42)
+            sheet.column_dimensions[get_column_letter(column_cells[0].column)].width = max(max_len, 12)
+        workbook.save(output)
+        output.seek(0)
+        return send_file(output, as_attachment=True, download_name=f"{safe_name}_{stamp}.xlsx",
+                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    if export_format == "pdf":
+        try:
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import landscape, A4
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.lib.units import mm
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        except ImportError:
+            flash("PDF export requires reportlab. Install dependencies from requirements.txt.", "error")
+            return redirect(url_for("settings"))
+        output = io.BytesIO()
+        doc = SimpleDocTemplate(output, pagesize=landscape(A4), rightMargin=12*mm, leftMargin=12*mm,
+                                topMargin=12*mm, bottomMargin=12*mm)
+        styles = getSampleStyleSheet()
+        story = [Paragraph(f"LibraryMS Report: {report_type}", styles["Title"]),
+                 Paragraph(f"Generated: {datetime.now().strftime('%d %b %Y, %I:%M %p')}", styles["Normal"]), Spacer(1, 8*mm)]
+        table_data = [[str(v) for v in headers]] + [[str(v) if v is not None else "" for v in row] for row in rows]
+        if not table_data[0]:
+            table_data = [["No report columns available"]]
+        available_width = landscape(A4)[0] - 24*mm
+        col_width = available_width / max(len(table_data[0]), 1)
+        column_widths = [col_width for _ in table_data[0]]
+        table = Table(table_data, repeatRows=1, colWidths=column_widths)
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1D4ED8")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 7),
+            ("LEADING", (0, 0), (-1, -1), 9),
+            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(table)
+        doc.build(story)
+        output.seek(0)
+        return send_file(output, as_attachment=True, download_name=f"{safe_name}_{stamp}.pdf", mimetype="application/pdf")
+
+    output = io.StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(headers)
     writer.writerows(rows)
+    return Response("\ufeff" + output.getvalue(), mimetype="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename={safe_name}_{stamp}.csv"})
 
-    filename = f"{report_type.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": f"attachment;filename={filename}"}
-    )
+
+@app.route("/settings/backup")
+def download_database_backup():
+    """Create a consistent SQLite backup without exposing the live database file directly."""
+    if session.get("role", "Admin").lower() != "admin":
+        flash("Only an administrator can back up the database.", "error")
+        return redirect(url_for("settings"))
+    if not os.path.isfile(DB_PATH):
+        flash("Database file was not found.", "error")
+        return redirect(url_for("settings"))
+    temp = tempfile.NamedTemporaryFile(prefix="libraryms_backup_", suffix=".db", delete=False)
+    temp_path = temp.name
+    temp.close()
+    try:
+        with sqlite3.connect(DB_PATH) as source, sqlite3.connect(temp_path) as destination:
+            source.backup(destination)
+        response = send_file(temp_path, as_attachment=True,
+                             download_name=f"libraryms_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db",
+                             mimetype="application/vnd.sqlite3")
+        response.call_on_close(lambda: os.path.exists(temp_path) and os.unlink(temp_path))
+        return response
+    except Exception:
+        try:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+        except OSError:
+            pass
+        raise
+
+
+@app.route("/settings/restore", methods=["POST"])
+def restore_database_backup():
+    """Restore only a valid SQLite database containing the expected LMS tables."""
+    if session.get("role", "Admin").lower() != "admin":
+        flash("Only an administrator can restore the database.", "error")
+        return redirect(url_for("settings"))
+    uploaded = request.files.get("backup_file")
+    if not uploaded or not uploaded.filename:
+        flash("Choose a database backup file first.", "error")
+        return redirect(url_for("settings"))
+    os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
+    fd, candidate_path = tempfile.mkstemp(prefix="libraryms_restore_", suffix=".db")
+    os.close(fd)
+    try:
+        uploaded.save(candidate_path)
+        with sqlite3.connect(candidate_path) as candidate:
+            integrity = candidate.execute("PRAGMA integrity_check").fetchone()
+            tables = {r[0] for r in candidate.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        required = {"users", "books", "members", "transactions", "settings"}
+        if not integrity or integrity[0] != "ok" or not required.issubset(tables):
+            flash("Restore cancelled: file is not a valid LibraryMS database backup.", "error")
+            return redirect(url_for("settings"))
+        # Preserve the current database before replacing it.
+        if os.path.exists(DB_PATH):
+            pre_restore = DB_PATH + ".pre_restore_backup"
+            shutil.copy2(DB_PATH, pre_restore)
+        os.replace(candidate_path, DB_PATH)
+        flash("Database restored successfully. Your previous database was preserved as .pre_restore_backup.", "success")
+    except (OSError, sqlite3.Error) as exc:
+        flash(f"Could not restore database: {exc}", "error")
+    finally:
+        try:
+            if os.path.exists(candidate_path):
+                os.unlink(candidate_path)
+        except OSError:
+            pass
+    return redirect(url_for("settings"))
 
 
 # =============================================================================
@@ -614,9 +755,11 @@ def internal_error(error):
 # =============================================================================
 # APPLICATION ENTRY POINT
 # =============================================================================
+# Gunicorn imports this module without executing the __main__ block, so initialize
+# the schema here as well. init_db() is designed to be safe to rerun.
+init_db()
+
 if __name__ == "__main__":
-    # Ensure database tables and initial sample data are seeded
-    init_db()
 
     host = "127.0.0.1"
     port = 5000
