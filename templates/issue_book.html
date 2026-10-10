@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Issue Book{% endblock %}
+{% block page_name %}Issue Book to Member{% endblock %}
+
+{% block content %}
+<div class="circulation-page-container">
+
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">Issue Book to Library Member</h1>
+            <p class="page-subtitle">Loan out books from available catalog inventory to registered students and faculty.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('return_book') }}" class="btn btn-secondary">
+                <span class="btn-icon">📥</span> View Active Loans
+            </a>
+        </div>
+    </div>
+
+    <!-- Loan Policy Callout Box -->
+    <div class="card policy-banner-card mb-4">
+        <div class="policy-icon">ℹ️</div>
+        <div class="policy-content">
+            <div class="policy-title">Standard Circulation Policy</div>
+            <div class="policy-text">
+                Standard loan duration is <strong>{{ default_loan_days }} days</strong>. 
+                Overdue fines accrue at <strong>{{ currency_symbol }}{{ "%.2f"|format(fine_per_day) }} per day</strong> past the due date. 
+                Only books currently in stock (available copies &gt; 0) can be issued.
+            </div>
+        </div>
+    </div>
+
+    <!-- Issue Form Card -->
+    <div class="card form-card-box">
+        <form method="POST" action="{{ url_for('issue_book') }}" class="standard-form">
+
+            <div class="form-row">
+                <!-- 1. Select Book -->
+                <div class="form-group flex-1">
+                    <label for="book_id" class="form-label">1. Select Available Book <span class="required">*</span></label>
+                    <select name="book_id" id="book_id" class="form-select form-control" required>
+                        <option value="" disabled {% if not prefill_book_id %}selected{% endif %}>-- Choose from available catalog --</option>
+                        {% for b in available_books %}
+                            <option value="{{ b.id }}" {% if prefill_book_id == b.id %}selected{% endif %}>
+                                {{ b.title }} (Available: {{ b.available }}/{{ b.quantity }} | ISBN: {{ b.isbn }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if not available_books %}
+                        <small class="form-hint text-danger">No books currently have available copies in stock!</small>
+                    {% else %}
+                        <small class="form-hint">Only titles with available copies &gt; 0 are listed.</small>
+                    {% endif %}
+                </div>
+
+                <!-- 2. Select Member -->
+                <div class="form-group flex-1">
+                    <label for="member_id" class="form-label">2. Select Library Member <span class="required">*</span></label>
+                    <select name="member_id" id="member_id" class="form-select form-control" required>
+                        <option value="" disabled {% if not prefill_member_id %}selected{% endif %}>-- Choose registered member --</option>
+                        {% for m in members %}
+                            <option value="{{ m.id }}" {% if prefill_member_id == m.id %}selected{% endif %}>
+                                {{ m.name }} [{{ m.member_id }}] - {{ m.email }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">
+                        Can't find member? <a href="{{ url_for('add_member') }}">Add a new member first</a>.
+                    </small>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <!-- 3. Issue Date -->
+                <div class="form-group flex-1">
+                    <label for="issue_date" class="form-label">3. Issue Date <span class="required">*</span></label>
+                    <input 
+                        type="date" 
+                        id="issue_date" 
+                        name="issue_date" 
+                        value="{{ today_str }}" 
+                        class="form-control" 
+                        required
+                        onchange="recalculateDueDate()"
+                    >
+                    <small class="form-hint">Date book is handed to the member.</small>
+                </div>
+
+                <!-- 4. Due Date -->
+                <div class="form-group flex-1">
+                    <label for="due_date" class="form-label">4. Due Date (Auto +{{ default_loan_days }} days) <span class="required">*</span></label>
+                    <input 
+                        type="date" 
+                        id="due_date" 
+                        name="due_date" 
+                        value="{{ due_date_str }}" 
+                        class="form-control" 
+                        required
+                    >
+                    <small class="form-hint">Default loan period is {{ default_loan_days }} days from issue date.</small>
+                </div>
+            </div>
+
+            <div class="form-actions-bar">
+                <button type="submit" class="btn btn-primary" {% if not available_books %}disabled{% endif %}>
+                    <span class="btn-icon">📤</span> Complete Book Issue
+                </button>
+                <a href="{{ url_for('books_list') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<script>
+function recalculateDueDate() {
+    const issueInput = document.getElementById('issue_date');
+    const dueInput = document.getElementById('due_date');
+    if (issueInput.value) {
+        const issueDate = new Date(issueInput.value);
+        issueDate.setDate(issueDate.getDate() + {{ default_loan_days }});
+        const yyyy = issueDate.getFullYear();
+        const mm = String(issueDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(issueDate.getDate()).padStart(2, '0');
+        dueInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+}
+</script>
+{% endblock %}
