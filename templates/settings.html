@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings{% endblock %}
+{% block page_name %}Settings & Accessibility{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">Settings & System Preferences</h1>
+            <p class="page-subtitle">Configure application theming, accessibility modes, view database metrics, and export reports.</p>
+        </div>
+    </div>
+
+    <div class="settings-grid">
+        
+        <!-- Left: Appearance & Accessibility Settings -->
+        <div class="card settings-card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">♿ Visual Preferences & Accessibility</h2>
+                    <p class="card-subtitle">Preferences persist in the SQLite database and sync across sessions.</p>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('settings') }}" class="settings-form">
+                
+                <div class="setting-toggle-row">
+                    <div class="setting-info">
+                        <div class="setting-name">🌙 Dark Mode Appearance</div>
+                        <div class="setting-desc">Enable sleek dark theme to reduce eye strain in low-light environments.</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" name="dark_mode" value="1" {% if settings.dark_mode %}checked{% endif %}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="setting-toggle-row">
+                    <div class="setting-info">
+                        <div class="setting-name">⚡ High Contrast Mode</div>
+                        <div class="setting-desc">Ultra high contrast black and gold palette for maximum readability.</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" name="high_contrast" value="1" {% if settings.high_contrast %}checked{% endif %}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="form-group mt-4">
+                    <label for="font_size" class="form-label">Base Font Scaling Size (Accessibility):</label>
+                    <select name="font_size" id="font_size" class="form-select form-control">
+                        <option value="12" {% if settings.font_size == 12 %}selected{% endif %}>12px - Compact</option>
+                        <option value="14" {% if settings.font_size == 14 %}selected{% endif %}>14px - Standard (Default)</option>
+                        <option value="16" {% if settings.font_size == 16 %}selected{% endif %}>16px - Medium</option>
+                        <option value="18" {% if settings.font_size == 18 %}selected{% endif %}>18px - Large</option>
+                        <option value="20" {% if settings.font_size == 20 %}selected{% endif %}>20px - Extra Large</option>
+                    </select>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-icon">💾</span> Save Preferences
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Right: Business Rules & System Information -->
+        <div class="card settings-card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">⚙️ Circulation Policy & System Details</h2>
+                    <p class="card-subtitle">Active library business rules and infrastructure parameters.</p>
+                </div>
+            </div>
+
+            <div class="system-specs-list">
+                <div class="spec-item">
+                    <span class="spec-label">Currency Symbol:</span>
+                    <span class="spec-value"><strong>{{ currency_symbol }} (INR)</strong></span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Overdue Fine Rate:</span>
+                    <span class="spec-value text-danger"><strong>{{ currency_symbol }}{{ "%.2f"|format(fine_per_day) }} / day</strong></span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Default Loan Duration:</span>
+                    <span class="spec-value"><strong>{{ default_loan_days }} Calendar Days</strong></span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Database Engine:</span>
+                    <span class="spec-value"><span class="badge badge-success">SQLite 3</span></span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Database Path:</span>
+                    <span class="spec-value"><code class="code-path">{{ db_path }}</code></span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Total Catalog Titles:</span>
+                    <span class="spec-value">{{ stats.total_books }}</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Total Members:</span>
+                    <span class="spec-value">{{ stats.total_members }}</span>
+                </div>
+            </div>
+
+            <div class="academic-project-box mt-4">
+                <div class="academic-title">🎓 Academic Project Credits</div>
+                <div class="academic-author">Student: <strong>{{ student_name }}</strong></div>
+                <div class="academic-roll">Roll No: <strong>{{ student_roll }}</strong></div>
+                <div class="academic-desc mt-2">
+                    Library Management System developed as a full-stack academic project. Features SQLite database persistence, business rule enforcement, and responsive web UI.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Export Reports Card -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">📊 Export Reports (CSV / Excel / PDF)</h2>
+                <p class="card-subtitle">Download live reports as CSV, Excel workbooks, or PDF documents.</p>
+            </div>
+        </div>
+
+        <div class="reports-export-grid">
+            <div class="report-box">
+                <div class="report-title">📚 Complete Book Catalog</div>
+                <div class="report-desc">All books with ISBN, title, author, category, total stock, and available copies.</div>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='All Books', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='All Books', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='All Books', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
+            </div>
+
+            <div class="report-box">
+                <div class="report-title">✅ Available Books Inventory</div>
+                <div class="report-desc">In-stock books ready to be loaned out to students and faculty.</div>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='Available Books', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='Available Books', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='Available Books', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
+            </div>
+
+            <div class="report-box">
+                <div class="report-title">📤 Active Issued Loans</div>
+                <div class="report-desc">All unreturned books with borrower names, issue dates, and due dates.</div>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='Issued Books', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='Issued Books', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='Issued Books', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
+            </div>
+
+            <div class="report-box">
+                <div class="report-title">⚠️ Overdue Loans Report</div>
+                <div class="report-desc">Delinquent loans with accrued overdue days and fine amounts.</div>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='Overdue Books', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='Overdue Books', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='Overdue Books', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
+            </div>
+
+            <div class="report-box">
+                <div class="report-title">👥 All Registered Members</div>
+                <div class="report-desc">Member directory with IDs, names, phones, and email addresses.</div>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='All Members', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='All Members', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='All Members', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
+            </div>
+
+            <div class="report-box">
+                <div class="report-title">💰 Fine Collection Ledger</div>
+                <div class="report-desc">Comprehensive ledger of collected and outstanding library fines.</div>
+                <div class="mt-2" style="display:flex;gap:6px;flex-wrap:wrap"><a href="{{ url_for('export_transactions', type='Fine Collection', format='csv') }}" class="btn btn-sm btn-secondary">CSV</a><a href="{{ url_for('export_transactions', type='Fine Collection', format='xlsx') }}" class="btn btn-sm btn-secondary">Excel</a><a href="{{ url_for('export_transactions', type='Fine Collection', format='pdf') }}" class="btn btn-sm btn-secondary">PDF</a></div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Database Backup & Restore -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">🛡️ Database Backup & Restore</h2>
+                <p class="card-subtitle">Download a safe SQLite backup before major changes. Restore only a backup from this LibraryMS project.</p>
+            </div>
+        </div>
+        <div class="reports-export-grid">
+            <div class="report-box">
+                <div class="report-title">⬇️ Create Backup</div>
+                <div class="report-desc">Download a consistent copy of books, members, users, settings, and transactions.</div>
+                <a href="{{ url_for('download_database_backup') }}" class="btn btn-primary mt-2">Download Database Backup</a>
+            </div>
+            <div class="report-box">
+                <div class="report-title">⬆️ Restore Backup</div>
+                <div class="report-desc">The uploaded database is validated before restore. The current database is copied to a pre-restore backup first.</div>
+                <form method="POST" action="{{ url_for('restore_database_backup') }}" enctype="multipart/form-data" class="mt-2" onsubmit="return confirm('Restore this backup? The current database will be replaced, and a safety copy will be kept.');">
+                    <input type="file" name="backup_file" accept=".db,.sqlite,.sqlite3,application/octet-stream" required class="form-control" aria-label="Choose SQLite backup">
+                    <button type="submit" class="btn btn-secondary mt-2">Validate & Restore</button>
+                </form>
+            </div>
+        </div>
+        <p class="text-muted mt-2" style="font-size:0.9rem">Tip: a USB barcode scanner that types the ISBN works with the existing ISBN search field in Books Catalog.</p>
+    </div>
+
+</div>
+{% endblock %}
