@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Return Book & Active Loans{% endblock %}
+{% block page_name %}Return Book Management{% endblock %}
+
+{% block content %}
+<div class="circulation-page-container">
+
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">Active Loans & Book Returns</h1>
+            <p class="page-subtitle">Track all currently checked-out volumes, calculate live overdue fines, and record book check-ins.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('issue_book') }}" class="btn btn-primary">
+                <span class="btn-icon">📤</span> Issue New Book
+            </a>
+            <a href="{{ url_for('transactions_list') }}" class="btn btn-secondary">
+                <span class="btn-icon">📋</span> All Transactions
+            </a>
+        </div>
+    </div>
+
+    <!-- Toolbar & Search -->
+    <div class="card toolbar-card">
+        <form method="GET" action="{{ url_for('return_book') }}" class="filter-toolbar-form">
+            <div class="search-input-group">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    name="q" 
+                    value="{{ search_query }}" 
+                    placeholder="Search active loans by Book Title, ISBN, Member Name, or Member ID..." 
+                    class="form-control search-input"
+                >
+                {% if search_query %}
+                    <a href="{{ url_for('return_book') }}" class="clear-search-btn" title="Clear search">&times;</a>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-secondary">Search</button>
+            {% if search_query %}
+                <a href="{{ url_for('return_book') }}" class="btn btn-outline">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Active Loans Table -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Currently Issued Books ({{ active_loans|length }} Active Loans)</h2>
+                <p class="card-subtitle">Fines automatically calculate at {{ currency_symbol }}{{ "%.2f"|format(fine_per_day) }}/day past the due date.</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">Tx ID</th>
+                        <th>Book Information</th>
+                        <th>Member Details</th>
+                        <th style="width: 120px;">Issue Date</th>
+                        <th style="width: 120px;">Due Date</th>
+                        <th style="width: 140px; text-align: center;">Overdue Status</th>
+                        <th style="width: 120px; text-align: center;">Current Fine</th>
+                        <th style="width: 150px; text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if active_loans %}
+                        {% for loan in active_loans %}
+                        <tr>
+                            <td><span class="text-muted font-mono">#{{ loan.id }}</span></td>
+                            <td>
+                                <div class="font-semibold">{{ loan.book_title }}</div>
+                                <div class="text-muted"><small>ISBN: {{ loan.isbn }}</small></div>
+                            </td>
+                            <td>
+                                <div class="font-semibold">{{ loan.member_name }}</div>
+                                <div class="text-muted"><small>ID: {{ loan.member_code }} • 📞 {{ loan.phone }}</small></div>
+                            </td>
+                            <td><span class="date-chip">{{ loan.issue_date }}</span></td>
+                            <td>
+                                <span class="date-chip {% if loan.is_overdue %}date-chip-overdue{% endif %}">
+                                    {{ loan.due_date }}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                {% if loan.is_overdue %}
+                                    <span class="badge badge-danger">
+                                        ⚠️ Overdue by {{ loan.overdue_days }} day(s)
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-success">
+                                        ✓ On Time
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center;">
+                                {% if loan.current_fine and loan.current_fine > 0 %}
+                                    <span class="fine-badge">{{ currency_symbol }}{{ "%.2f"|format(loan.current_fine) }}</span>
+                                {% else %}
+                                    <span class="text-muted">₹0.00</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <button 
+                                    type="button" 
+                                    class="action-btn action-btn-return"
+                                    onclick="openReturnModal('{{ loan.id }}', '{{ loan.book_title|replace('\'', '\\\'') }}', '{{ loan.member_name|replace('\'', '\\\'') }}', '{{ loan.is_overdue }}', '{{ loan.overdue_days }}', '{{ loan.current_fine }}')"
+                                    title="Process Book Return"
+                                >
+                                    📥 Return Book
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <div class="empty-state">
+                                    <div class="empty-icon">✅</div>
+                                    <div class="empty-title">All books are accounted for!</div>
+                                    <p class="empty-desc">
+                                        {% if search_query %}
+                                            No active loans matched your search query.
+                                        {% else %}
+                                            There are currently no outstanding issued books in circulation.
+                                        {% endif %}
+                                    </p>
+                                    <a href="{{ url_for('issue_book') }}" class="btn btn-primary mt-3">Issue a Book</a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
