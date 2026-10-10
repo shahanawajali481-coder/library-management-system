@@ -196,7 +196,6 @@ class TransactionService:
         finally:
             conn.close()
 
-    @staticmethod
     def get_all_transactions(search_query: str = "", status: str = "All") -> List[Dict]:
         """Fetch all transactions with optional search and status filtering ('All', 'Issued', 'Returned')."""
         conn = get_db_connection()
@@ -240,36 +239,6 @@ class TransactionService:
         finally:
             conn.close()
 
-    @staticmethod
-    def get_transaction_by_id(transaction_id: int) -> Optional[Dict]:
-        """Fetch a single transaction record with book and member metadata."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("""
-                SELECT t.*, b.title as book_title, b.isbn, b.quantity, b.available,
-                       m.name as member_name, m.member_id as member_code, m.phone, m.email
-                FROM transactions t
-                JOIN books b ON t.book_id = b.id
-                JOIN members m ON t.member_id = m.id
-                WHERE t.id = ?
-            """, (transaction_id,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            data = dict(row)
-            if data["status"] == "Issued":
-                od, fine = TransactionService.calculate_fine(data["due_date"])
-                data["overdue_days"] = od
-                data["current_fine"] = fine
-                data["is_overdue"] = od > 0
-            else:
-                data["overdue_days"] = 0
-                data["current_fine"] = data["fine"] or 0.0
-                data["is_overdue"] = False
-            return data
-        finally:
-            conn.close()
 
     @staticmethod
     def get_dashboard_stats() -> Dict:

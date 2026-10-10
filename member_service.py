@@ -129,26 +129,21 @@ class MemberService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            sql = """
-                SELECT m.*, 
-                       (SELECT COUNT(*) FROM transactions WHERE member_id = m.id AND status = 'Issued') as active_loans
-                FROM members m 
-                WHERE 1=1
-            """
+            sql = "SELECT * FROM members WHERE 1=1"
             params = []
 
             if search_query and search_query.strip():
                 query = f"%{search_query.strip()}%"
-                sql += " AND (m.member_id LIKE ? OR m.name LIKE ? OR m.phone LIKE ? OR m.email LIKE ?)"
+                sql += " AND (member_id LIKE ? OR name LIKE ? OR phone LIKE ? OR email LIKE ?)"
                 params.extend([query, query, query, query])
 
             valid_sort = {
-                "id": "m.id ASC",
-                "member_id": "m.member_id COLLATE NOCASE ASC",
-                "name": "m.name COLLATE NOCASE ASC",
-                "email": "m.email COLLATE NOCASE ASC"
+                "id": "id ASC",
+                "member_id": "member_id COLLATE NOCASE ASC",
+                "name": "name COLLATE NOCASE ASC",
+                "email": "email COLLATE NOCASE ASC"
             }
-            sort_clause = valid_sort.get(sort_by, "m.name COLLATE NOCASE ASC")
+            sort_clause = valid_sort.get(sort_by, "name COLLATE NOCASE ASC")
             sql += f" ORDER BY {sort_clause}"
 
             cursor.execute(sql, params)
@@ -162,31 +157,8 @@ class MemberService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("""
-                SELECT m.*, 
-                       (SELECT COUNT(*) FROM transactions WHERE member_id = m.id AND status = 'Issued') as active_loans
-                FROM members m 
-                WHERE m.id = ?
-            """, (id,))
+            cursor.execute("SELECT * FROM members WHERE id = ?", (id,))
             row = cursor.fetchone()
             return dict(row) if row else None
-        finally:
-            conn.close()
-
-    @staticmethod
-    def get_member_loans(member_id: int) -> List[Dict]:
-        """Fetch all loans (active and returned) for a specific member."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("""
-                SELECT t.id, t.book_id, t.issue_date, t.due_date, t.return_date, t.status, t.fine,
-                       b.title as book_title, b.isbn
-                FROM transactions t
-                JOIN books b ON t.book_id = b.id
-                WHERE t.member_id = ?
-                ORDER BY t.id DESC
-            """, (member_id,))
-            return [dict(r) for r in cursor.fetchall()]
         finally:
             conn.close()

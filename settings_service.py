@@ -3,8 +3,7 @@ Settings Service: Manages persistence of accessibility preferences (Dark Mode,
 High Contrast, Font Size) and user authentication.
 """
 
-import re
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict
 from database import get_db_connection, hash_password
 from config import theme_mgr, DEFAULT_FONT_SIZE
 
@@ -73,76 +72,18 @@ class SettingsService:
             conn.close()
 
     @staticmethod
-    def verify_login(identifier: str, password: str) -> Optional[Dict]:
-        """Validate user credentials against users table (supports username or email)."""
-        identifier = identifier.strip()
+    def verify_login(username: str, password: str) -> Optional[Dict]:
+        """Validate user credentials against users table."""
+        username = username.strip()
         pwd_hash = hash_password(password)
 
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("""
-                SELECT id, username, role, name, email 
-                FROM users 
-                WHERE (LOWER(username) = LOWER(?) OR LOWER(COALESCE(email, '')) = LOWER(?)) 
-                  AND password = ?
-            """, (identifier, identifier, pwd_hash))
+            cursor.execute("SELECT id, username, role FROM users WHERE username = ? AND password = ?", (username, pwd_hash))
             row = cursor.fetchone()
             if row:
                 return dict(row)
             return None
         finally:
             conn.close()
-
-    @staticmethod
-    def register_user(name: str, username: str, email: str, password: str, role: str = "Staff") -> Tuple[bool, str, Optional[int]]:
-        """Validate and securely register a new user with hashed password."""
-        name = name.strip()
-        username = username.strip()
-        email = email.strip()
-
-        # 1. Validation
-        if not name:
-            return False, "Full Name is required.", None
-        if not username:
-            return False, "Username is required.", None
-        if len(username) < 3:
-            return False, "Username must be at least 3 characters long.", None
-        if not re.match(r"^[a-zA-Z0-9_.-]+$", username):
-            return False, "Username can only contain letters, numbers, dots, hyphens, and underscores.", None
-        if not email:
-            return False, "Email address is required.", None
-        if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email):
-            return False, "Invalid email address format (e.g. name@college.edu).", None
-        if not password or len(password) < 6:
-            return False, "Password must be at least 6 characters long.", None
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            # 2. Check if username already exists
-            cursor.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(?)", (username,))
-            if cursor.fetchone():
-                return False, f"Username '{username}' is already registered. Please choose a different username.", None
-
-            # 3. Check if email already exists
-            cursor.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(?)", (email,))
-            if cursor.fetchone():
-                return False, f"An account with email '{email}' already exists. Please log in or use another email.", None
-
-            # 4. Hash password securely
-            pwd_hash = hash_password(password)
-
-            # 5. Insert new user
-            cursor.execute("""
-                INSERT INTO users (username, password, role, name, email)
-                VALUES (?, ?, ?, ?, ?)
-            """, (username, pwd_hash, role, name, email))
-            conn.commit()
-            new_id = cursor.lastrowid
-            return True, f"Account created successfully for '{username}'! Please sign in with your credentials.", new_id
-        except Exception as e:
-            return False, f"Database error during registration: {str(e)}", None
-        finally:
-            conn.close()
-
