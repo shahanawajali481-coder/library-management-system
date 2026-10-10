@@ -4,12 +4,19 @@ Student: SHAHANAWAJ (Roll No: 2410302051)
 """
 
 import os
-import customtkinter as ctk
+
+# Optional GUI import for CustomTkinter (Desktop Mode)
+try:
+    import customtkinter as ctk
+    HAS_GUI = True
+except (ImportError, ModuleNotFoundError):
+    ctk = None
+    HAS_GUI = False
 
 # Base Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE_DIR, "database")
-DB_PATH = os.path.join(DB_DIR, "library.db")
+DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(DB_DIR, "library.db"))
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
 # Student Project Information
@@ -165,12 +172,16 @@ class ThemeManager:
 
     def notify_listeners(self):
         """Synchronize CustomTkinter appearance mode and invoke all listeners."""
-        if self.high_contrast:
-            ctk.set_appearance_mode("Dark")
-        elif self.dark_mode:
-            ctk.set_appearance_mode("Dark")
-        else:
-            ctk.set_appearance_mode("Light")
+        if HAS_GUI and ctk is not None:
+            try:
+                if self.high_contrast:
+                    ctk.set_appearance_mode("Dark")
+                elif self.dark_mode:
+                    ctk.set_appearance_mode("Dark")
+                else:
+                    ctk.set_appearance_mode("Light")
+            except Exception:
+                pass
 
         for listener in list(self._listeners):
             try:
@@ -203,11 +214,16 @@ class ThemeManager:
             self.set_font_size(AVAILABLE_FONT_SIZES[idx - 1])
         return self.font_size
 
-    def get_font(self, offset: int = 0, weight: str = "normal", slant: str = "roman") -> ctk.CTkFont:
+    def get_font(self, offset: int = 0, weight: str = "normal", slant: str = "roman"):
         """Dynamically compute font respecting current accessibility base font size."""
         target_size = max(10, self.font_size + offset)
         font_family = "Segoe UI" if os.name == "nt" else "Helvetica"
-        return ctk.CTkFont(family=font_family, size=target_size, weight=weight, slant=slant)
+        if HAS_GUI and ctk is not None:
+            try:
+                return ctk.CTkFont(family=font_family, size=target_size, weight=weight, slant=slant)
+            except Exception:
+                pass
+        return (font_family, target_size, weight)
 
 
 # Global singleton instance

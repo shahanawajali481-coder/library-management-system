@@ -36,9 +36,19 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            role TEXT DEFAULT 'Admin'
+            role TEXT DEFAULT 'Admin',
+            name TEXT,
+            email TEXT UNIQUE
         );
     """)
+
+    # Migration check: Ensure name and email columns exist if table was previously created
+    cursor.execute("PRAGMA table_info(users);")
+    user_cols = [col["name"] for col in cursor.fetchall()]
+    if "name" not in user_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN name TEXT;")
+    if "email" not in user_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN email TEXT;")
 
     # 2. Books Table
     cursor.execute("""
