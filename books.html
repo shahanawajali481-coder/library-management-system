@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Books Catalog{% endblock %}
+{% block page_name %}Books Management{% endblock %}
+
+{% block content %}
+<div class="books-page">
+
+    <!-- Top Action Header -->
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">Books Catalog & Inventory</h1>
+            <p class="page-subtitle">Manage books catalog, track stock, categories, and circulation availability.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('add_book') }}" class="btn btn-primary">
+                <span class="btn-icon">➕</span> Add New Book
+            </a>
+        </div>
+    </div>
+
+    <!-- Inventory Mini Metrics -->
+    <div class="mini-metrics-row">
+        <div class="mini-metric-pill">
+            <span class="mini-label">Total Titles:</span>
+            <span class="mini-val">{{ total_titles }}</span>
+        </div>
+        <div class="mini-metric-pill">
+            <span class="mini-label">Total Inventory:</span>
+            <span class="mini-val">{{ total_copies }} copies</span>
+        </div>
+        <div class="mini-metric-pill">
+            <span class="mini-label">Available to Loan:</span>
+            <span class="mini-val text-success">{{ total_available }} copies</span>
+        </div>
+        <div class="mini-metric-pill">
+            <span class="mini-label">Currently Issued:</span>
+            <span class="mini-val text-primary">{{ total_copies - total_available }} copies</span>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="card toolbar-card">
+        <form method="GET" action="{{ url_for('books_list') }}" class="filter-toolbar-form">
+            <!-- Search Box -->
+            <div class="search-input-group">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    name="q" 
+                    value="{{ search_query }}" 
+                    placeholder="Search by Title, Author, or ISBN..." 
+                    class="form-control search-input"
+                >
+                {% if search_query %}
+                    <a href="{{ url_for('books_list', category=selected_category, sort=selected_sort) }}" class="clear-search-btn" title="Clear search">&times;</a>
+                {% endif %}
+            </div>
+
+            <!-- Category Filter -->
+            <div class="filter-select-group">
+                <label for="categoryFilter" class="filter-label">Category:</label>
+                <select name="category" id="categoryFilter" class="form-select" onchange="this.form.submit()">
+                    <option value="All" {% if selected_category == 'All' %}selected{% endif %}>All Categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Sort By -->
+            <div class="filter-select-group">
+                <label for="sortFilter" class="filter-label">Sort:</label>
+                <select name="sort" id="sortFilter" class="form-select" onchange="this.form.submit()">
+                    <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title (A-Z)</option>
+                    <option value="author" {% if selected_sort == 'author' %}selected{% endif %}>Author (A-Z)</option>
+                    <option value="category" {% if selected_sort == 'category' %}selected{% endif %}>Category</option>
+                    <option value="available" {% if selected_sort == 'available' %}selected{% endif %}>Most Available</option>
+                    <option value="quantity" {% if selected_sort == 'quantity' %}selected{% endif %}>Highest Quantity</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            {% if search_query or selected_category != 'All' or selected_sort != 'title' %}
+                <a href="{{ url_for('books_list') }}" class="btn btn-outline">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Books Table Card -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">#</th>
+                        <th style="width: 140px;">ISBN</th>
+                        <th>Title & Author</th>
+                        <th style="width: 160px;">Category</th>
+                        <th style="width: 90px; text-align: center;">Total</th>
+                        <th style="width: 100px; text-align: center;">Available</th>
+                        <th style="width: 130px; text-align: center;">Status</th>
+                        <th style="width: 180px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if books %}
+                        {% for book in books %}
+                        <tr>
+                            <td class="text-muted">{{ loop.index }}</td>
+                            <td>
+                                <code class="isbn-code">{{ book.isbn }}</code>
+                            </td>
+                            <td>
+                                <div class="book-title-cell font-semibold">{{ book.title }}</div>
+                                <div class="book-author-cell text-muted">by {{ book.author }}</div>
+                            </td>
+                            <td>
+                                <span class="category-tag">{{ book.category }}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="quantity-badge">{{ book.quantity }}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="available-badge {% if book.available == 0 %}available-zero{% elif book.available <= 2 %}available-low{% else %}available-high{% endif %}">
+                                    {{ book.available }}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                {% if book.available > 0 %}
+                                    <span class="badge badge-success">In Stock</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Out of Stock</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="table-actions">
+                                    {% if book.available > 0 %}
+                                        <a href="{{ url_for('issue_book', book_id=book.id) }}" class="action-btn action-btn-issue" title="Issue this book">
+                                            📤 Issue
+                                        </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('edit_book', book_id=book.id) }}" class="action-btn action-btn-edit" title="Edit book details">
+                                        ✏️ Edit
+                                    </a>
+                                    <button 
+                                        type="button" 
+                                        class="action-btn action-btn-delete" 
+                                        onclick="confirmDeleteBook('{{ book.id }}', '{{ book.title|replace('\'', '\\\'') }}', '{{ book.quantity - book.available }}')"
+                                        title="Delete book"
+                                    >
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📚</div>
+                                    <div class="empty-title">No books found</div>
+                                    <p class="empty-desc">
+                                        {% if search_query or selected_category != 'All' %}
+                                            Try refining your search terms or clearing filters.
+                                        {% else %}
+                                            Start by adding the first book to your library catalog.
+                                        {% endif %}
+                                    </p>
+                                    <a href="{{ url_for('add_book') }}" class="btn btn-primary mt-3">Add Book Now</a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Book Specific Delete Script -->
+<script>
+function confirmDeleteBook(bookId, bookTitle, loanedCount) {
+    const modal = document.getElementById('genericModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const modalForm = document.getElementById('modalForm');
+
+    modalTitle.textContent = "Confirm Delete Book";
+    
+    if (parseInt(loanedCount) > 0) {
+        modalBody.innerHTML = `<div class="alert alert-danger">
+            <strong>Warning:</strong> The book "<strong>${bookTitle}</strong>" currently has 
+            <strong>${loanedCount} active loan(s)</strong> checked out.<br>
+            It cannot be deleted until all copies are returned.
+        </div>`;
+        document.getElementById('modalConfirmBtn').style.display = 'none';
+    } else {
+        modalBody.innerHTML = `Are you sure you want to delete "<strong>${bookTitle}</strong>"?<br>This action cannot be undone.`;
+        document.getElementById('modalConfirmBtn').style.display = 'inline-block';
+    }
+
+    modalForm.action = `/books/${bookId}/delete`;
+    modal.style.display = 'flex';
+}
+</script>
+{% endblock %}

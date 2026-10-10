@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_name %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+
+    <!-- Welcome & Quick Action Header -->
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">Library Overview & Analytics</h1>
+            <p class="page-subtitle">Real-time statistics, inventory metrics, and recent lending activity.</p>
+        </div>
+        <div class="quick-actions-bar">
+            <a href="{{ url_for('issue_book') }}" class="btn btn-primary">
+                <span class="btn-icon">📤</span> Issue Book
+            </a>
+            <a href="{{ url_for('return_book') }}" class="btn btn-success">
+                <span class="btn-icon">📥</span> Return Book
+            </a>
+            <a href="{{ url_for('add_book') }}" class="btn btn-secondary">
+                <span class="btn-icon">➕</span> Add Book
+            </a>
+            <a href="{{ url_for('add_member') }}" class="btn btn-secondary">
+                <span class="btn-icon">👤</span> Add Member
+            </a>
+        </div>
+    </div>
+
+    <!-- 6 KPI Stat Cards Grid -->
+    <div class="stats-grid">
+        <!-- Card 1: Total Books -->
+        <div class="stat-card stat-primary">
+            <div class="stat-content">
+                <div class="stat-label">Total Books Quantity</div>
+                <div class="stat-value">{{ stats.total_books }}</div>
+                <div class="stat-meta">Total collection inventory</div>
+            </div>
+            <div class="stat-icon-wrapper bg-blue-subtle">
+                <span class="stat-icon">📚</span>
+            </div>
+        </div>
+
+        <!-- Card 2: Available Books -->
+        <div class="stat-card stat-success">
+            <div class="stat-content">
+                <div class="stat-label">Available Copies</div>
+                <div class="stat-value">{{ stats.available_books }}</div>
+                <div class="stat-meta">In stock & ready to loan</div>
+            </div>
+            <div class="stat-icon-wrapper bg-green-subtle">
+                <span class="stat-icon">✅</span>
+            </div>
+        </div>
+
+        <!-- Card 3: Issued Books -->
+        <div class="stat-card stat-info">
+            <div class="stat-content">
+                <div class="stat-label">Currently Issued</div>
+                <div class="stat-value">{{ stats.issued_books }}</div>
+                <div class="stat-meta">Currently in circulation</div>
+            </div>
+            <div class="stat-icon-wrapper bg-cyan-subtle">
+                <span class="stat-icon">📤</span>
+            </div>
+        </div>
+
+        <!-- Card 4: Registered Members -->
+        <div class="stat-card stat-purple">
+            <div class="stat-content">
+                <div class="stat-label">Total Members</div>
+                <div class="stat-value">{{ stats.total_members }}</div>
+                <div class="stat-meta">Students & faculty registered</div>
+            </div>
+            <div class="stat-icon-wrapper bg-purple-subtle">
+                <span class="stat-icon">👥</span>
+            </div>
+        </div>
+
+        <!-- Card 5: Overdue Loans -->
+        <div class="stat-card stat-danger">
+            <div class="stat-content">
+                <div class="stat-label">Overdue Loans</div>
+                <div class="stat-value">{{ stats.overdue_books }}</div>
+                <div class="stat-meta">Exceeded {{ default_loan_days }} day loan period</div>
+            </div>
+            <div class="stat-icon-wrapper bg-red-subtle">
+                <span class="stat-icon">⚠️</span>
+            </div>
+        </div>
+
+        <!-- Card 6: Total Fines -->
+        <div class="stat-card stat-warning">
+            <div class="stat-content">
+                <div class="stat-label">Total Fines (Accrued/Paid)</div>
+                <div class="stat-value">{{ currency_symbol }}{{ "%.2f"|format(stats.total_fine) }}</div>
+                <div class="stat-meta">At {{ currency_symbol }}{{ "%.2f"|format(fine_per_day) }} per overdue day</div>
+            </div>
+            <div class="stat-icon-wrapper bg-amber-subtle">
+                <span class="stat-icon">💰</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Middle Split Section: Recent Activity & Category Analytics -->
+    <div class="dashboard-split-grid">
+        <!-- Left: Recent Transactions Table -->
+        <div class="card recent-activity-card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Recent Lending Activity</h2>
+                    <p class="card-subtitle">Last 6 recorded issues and returns</p>
+                </div>
+                <a href="{{ url_for('transactions_list') }}" class="card-header-link">View All Transactions &rarr;</a>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Book Title</th>
+                            <th>Member</th>
+                            <th>Issue Date</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Fine</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if stats.recent_transactions %}
+                            {% for tx in stats.recent_transactions %}
+                            <tr>
+                                <td>
+                                    <div class="cell-title font-medium">{{ tx.book_title }}</div>
+                                </td>
+                                <td>
+                                    <div class="cell-member">{{ tx.member_name }}</div>
+                                </td>
+                                <td><span class="date-chip">{{ tx.issue_date }}</span></td>
+                                <td><span class="date-chip">{{ tx.due_date }}</span></td>
+                                <td>
+                                    {% if tx.status == 'Issued' %}
+                                        <span class="badge badge-warning">Issued</span>
+                                    {% elif tx.status == 'Returned' %}
+                                        <span class="badge badge-success">Returned</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ tx.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tx.fine and tx.fine > 0 %}
+                                        <span class="fine-badge">{{ currency_symbol }}{{ "%.2f"|format(tx.fine) }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No recent transactions recorded yet.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right: Books Category Distribution Breakdown -->
+        <div class="card category-distribution-card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Category Distribution</h2>
+                    <p class="card-subtitle">Inventory breakdown by subject</p>
+                </div>
+                <a href="{{ url_for('books_list') }}" class="card-header-link">View Catalog &rarr;</a>
+            </div>
+
+            <div class="category-bars-list">
+                {% if stats.category_distribution %}
+                    {% for cat, count in stats.category_distribution.items() %}
+                        {% set pct = (count / stats.total_books * 100) if stats.total_books > 0 else 0 %}
+                        <div class="category-bar-item">
+                            <div class="category-bar-header">
+                                <span class="category-name">{{ cat }}</span>
+                                <span class="category-count"><strong>{{ count }}</strong> copies ({{ "%.1f"|format(pct) }}%)</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: {{ pct }}%;"></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-4">No categories data available.</p>
+                {% endif %}
+            </div>
+
+            <div class="quick-system-card mt-4">
+                <div class="system-mini-info">
+                    <span class="mini-icon">🏛️</span>
+                    <div>
+                        <div class="mini-title">{{ app_subtitle }}</div>
+                        <div class="mini-sub">Standard Loan: {{ default_loan_days }} Days • Overdue Fine: {{ currency_symbol }}{{ "%.2f"|format(fine_per_day) }}/day</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

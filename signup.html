@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - {{ app_title }}</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="theme-{{ current_theme }} login-body">
+
+    <!-- Top floating bar with theme toggle -->
+    <div class="login-top-bar">
+        <div class="login-brand">
+            <span class="brand-icon">📚</span>
+            <span class="brand-title">{{ app_title }}</span>
+        </div>
+        <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Dark/Light Mode">
+            <span class="theme-icon-dark">🌙</span>
+            <span class="theme-icon-light">☀️</span>
+            <span class="theme-label" id="themeLabel">Theme</span>
+        </button>
+    </div>
+
+    <div class="login-wrapper">
+        <div class="card login-card signup-card">
+            
+            <div class="login-header text-center">
+                <div class="login-icon-circle">👤➕</div>
+                <h1 class="login-title">Create an Account</h1>
+                <p class="login-subtitle">Register to manage library circulation, catalog, and inventory</p>
+                <div class="login-student-badge">
+                    <span>College Project: <strong>{{ student_name }}</strong></span>
+                    <span class="footer-dot">•</span>
+                    <span>Roll: <strong>{{ student_roll }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages-container mt-3" id="flashContainer">
+                        {% for category, message in messages %}
+                            <div class="flash-alert flash-{{ category }}" role="alert">
+                                <div class="flash-icon">
+                                    {% if category == 'success' %}✓
+                                    {% elif category == 'danger' %}⚠️
+                                    {% elif category == 'warning' %}🔔
+                                    {% else %}ℹ️{% endif %}
+                                </div>
+                                <div class="flash-content">{{ message }}</div>
+                                <button type="button" class="flash-close-btn" onclick="this.parentElement.remove()" aria-label="Close message">&times;</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Sign Up Form -->
+            <form method="POST" action="{{ url_for('signup') }}" class="login-form mt-4" id="signupForm">
+                
+                <!-- 1. Full Name -->
+                <div class="form-group mb-3">
+                    <label for="name" class="form-label">Full Name <span class="required">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="field-icon">📝</span>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            name="name" 
+                            class="form-control" 
+                            placeholder="e.g. Shahanawaj Ansari" 
+                            value="{{ form_data.name if form_data else '' }}" 
+                            required 
+                            autofocus
+                        >
+                    </div>
+                </div>
+
+                <!-- 2. Username -->
+                <div class="form-group mb-3">
+                    <label for="username" class="form-label">Username <span class="required">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="field-icon">👤</span>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            class="form-control" 
+                            placeholder="e.g. shahanawaj" 
+                            value="{{ form_data.username if form_data else '' }}" 
+                            required
+                        >
+                    </div>
+                    <small class="form-hint">At least 3 characters. Letters, numbers, hyphens, and underscores.</small>
+                </div>
+
+                <!-- 3. Email Address -->
+                <div class="form-group mb-3">
+                    <label for="email" class="form-label">Email Address <span class="required">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="field-icon">✉️</span>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            class="form-control" 
+                            placeholder="e.g. student@college.edu" 
+                            value="{{ form_data.email if form_data else '' }}" 
+                            required
+                        >
+                    </div>
+                </div>
+
+                <!-- 4. Password -->
+                <div class="form-group mb-3">
+                    <div class="label-row">
+                        <label for="password" class="form-label">Password <span class="required">*</span></label>
+                        <button type="button" class="text-btn" id="togglePasswordBtn" onclick="togglePasswordVisibility('password', this)">Show</button>
+                    </div>
+                    <div class="input-with-icon">
+                        <span class="field-icon">🔒</span>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-control" 
+                            placeholder="Minimum 6 characters" 
+                            required
+                        >
+                    </div>
+                </div>
+
+                <!-- 5. Confirm Password -->
+                <div class="form-group mb-4">
+                    <div class="label-row">
+                        <label for="confirm_password" class="form-label">Confirm Password <span class="required">*</span></label>
+                        <button type="button" class="text-btn" id="toggleConfirmBtn" onclick="togglePasswordVisibility('confirm_password', this)">Show</button>
+                    </div>
+                    <div class="input-with-icon">
+                        <span class="field-icon">🔑</span>
+                        <input 
+                            type="password" 
+                            id="confirm_password" 
+                            name="confirm_password" 
+                            class="form-control" 
+                            placeholder="Re-type your password" 
+                            required
+                        >
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="form-group mb-3">
+                    <button type="submit" class="btn btn-primary btn-block btn-lg">
+                        <span class="btn-icon">✨</span> Create Account
+                    </button>
+                </div>
+
+                <!-- Already have an account? Login -->
+                <div class="auth-switch-link text-center mb-2">
+                    <span class="text-muted">Already have an account?</span> 
+                    <a href="{{ url_for('login') }}" class="font-semibold text-primary">Login</a>
+                </div>
+
+            </form>
+
+            <div class="login-footer text-center mt-4">
+                <small class="text-muted">
+                    SHA-256 Salted Encryption • Safe Credential Storage
+                </small>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script for interactive sign up features -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+    function togglePasswordVisibility(fieldId, toggleBtn) {
+        const input = document.getElementById(fieldId);
+        if (!input) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            toggleBtn.textContent = 'Hide';
+        } else {
+            input.type = 'password';
+            toggleBtn.textContent = 'Show';
+        }
+    }
+    </script>
+</body>
+</html>

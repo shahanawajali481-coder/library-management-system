@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}{{ member.name }} - Member Details{% endblock %}
+{% block page_name %}Member Profile{% endblock %}
+
+{% block content %}
+<div class="member-profile-page">
+
+    <!-- Top Action Header -->
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">{{ member.name }}</h1>
+            <p class="page-subtitle">Member Code: <strong>{{ member.member_id }}</strong> • Complete Lending & Borrowing History</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('issue_book', member_id=member.id) }}" class="btn btn-primary">
+                <span class="btn-icon">📤</span> Issue Book to {{ member.name.split(' ')[0] }}
+            </a>
+            <a href="{{ url_for('edit_member', id=member.id) }}" class="btn btn-secondary">
+                <span class="btn-icon">✏️</span> Edit Member
+            </a>
+            <a href="{{ url_for('members_list') }}" class="btn btn-outline">
+                &larr; Back to Directory
+            </a>
+        </div>
+    </div>
+
+    <!-- Member Info Cards Row -->
+    <div class="member-profile-grid">
+        <div class="card member-info-card">
+            <div class="member-avatar-large">
+                {{ member.name[:2]|upper }}
+            </div>
+            <div class="member-meta-info">
+                <h2 class="profile-name">{{ member.name }}</h2>
+                <div class="profile-id-tag">ID: {{ member.member_id }}</div>
+                
+                <div class="profile-contact-list mt-3">
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <span class="contact-text">{{ member.phone }}</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">✉️</span>
+                        <span class="contact-text">{{ member.email }}</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📚</span>
+                        <span class="contact-text">Currently Checked Out: <strong>{{ member.active_loans or 0 }}</strong> books</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card member-stats-summary-card">
+            <h3 class="card-title mb-3">Borrowing Summary</h3>
+            <div class="summary-metrics-box">
+                <div class="summary-metric">
+                    <span class="sm-label">Total Loans Recorded</span>
+                    <span class="sm-value">{{ loans|length }}</span>
+                </div>
+                <div class="summary-metric">
+                    <span class="sm-label">Active Loans</span>
+                    <span class="sm-value text-primary">{{ member.active_loans or 0 }}</span>
+                </div>
+                <div class="summary-metric">
+                    <span class="sm-label">Returned Loans</span>
+                    <span class="sm-value text-success">{{ (loans|length) - (member.active_loans or 0) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loans History Tables -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">All Borrowing Transactions</h2>
+                <p class="card-subtitle">Active unreturned books and historical loan archive for this member</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Tx ID</th>
+                        <th>Book Title & ISBN</th>
+                        <th>Issue Date</th>
+                        <th>Due Date</th>
+                        <th>Return Date</th>
+                        <th>Status</th>
+                        <th>Fine</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if loans %}
+                        {% for loan in loans %}
+                        <tr>
+                            <td><span class="text-muted">#{{ loan.id }}</span></td>
+                            <td>
+                                <div class="font-semibold">{{ loan.book_title }}</div>
+                                <div class="text-muted"><small>ISBN: {{ loan.isbn }}</small></div>
+                            </td>
+                            <td><span class="date-chip">{{ loan.issue_date }}</span></td>
+                            <td>
+                                <span class="date-chip {% if loan.is_overdue %}date-chip-overdue{% endif %}">
+                                    {{ loan.due_date }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if loan.return_date %}
+                                    <span class="date-chip">{{ loan.return_date }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.status == 'Issued' %}
+                                    {% if loan.is_overdue %}
+                                        <span class="badge badge-danger">Overdue ({{ loan.overdue_days }}d)</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">Issued</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-success">Returned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.current_fine and loan.current_fine > 0 %}
+                                    <span class="fine-badge">{{ currency_symbol }}{{ "%.2f"|format(loan.current_fine) }}</span>
+                                {% else %}
+                                    <span class="text-muted">₹0.00</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                {% if loan.status == 'Issued' %}
+                                    <button 
+                                        type="button" 
+                                        class="action-btn action-btn-return"
+                                        onclick="openReturnModal('{{ loan.id }}', '{{ loan.book_title|replace('\'', '\\\'') }}', '{{ member.name|replace('\'', '\\\'') }}', '{{ loan.is_overdue }}', '{{ loan.overdue_days }}', '{{ loan.current_fine }}')"
+                                    >
+                                        📥 Return Book
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted text-sm">Completed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                This member has no borrowing history yet.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

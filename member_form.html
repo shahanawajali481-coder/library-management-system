@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Member{% endblock %}
+{% block page_name %}{{ action }} Member{% endblock %}
+
+{% block content %}
+<div class="form-page-container">
+
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">{{ action }} Library Member</h1>
+            <p class="page-subtitle">
+                {% if action == 'Add' %}
+                    Register a new student, researcher, or faculty member into the circulation directory.
+                {% else %}
+                    Update contact details, phone number, or academic email address for this member.
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('members_list') }}" class="btn btn-secondary">
+                &larr; Back to Members Directory
+            </a>
+        </div>
+    </div>
+
+    <div class="card form-card-box">
+        <form method="POST" class="standard-form">
+            
+            <div class="form-row">
+                <!-- Member ID -->
+                <div class="form-group flex-1">
+                    <label for="member_id" class="form-label">Member ID / Student Roll <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        id="member_id" 
+                        name="member_id" 
+                        value="{{ member.member_id or '' }}" 
+                        placeholder="e.g. MEM-106 or 2410302051" 
+                        class="form-control" 
+                        required
+                    >
+                    <small class="form-hint">Unique institutional identifier (e.g. MEM-101, Roll Number).</small>
+                </div>
+
+                <!-- Full Name -->
+                <div class="form-group flex-1">
+                    <label for="name" class="form-label">Full Name <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        value="{{ member.name or '' }}" 
+                        placeholder="e.g. Shahanawaj Ansari" 
+                        class="form-control" 
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="form-row">
+                <!-- Phone -->
+                <div class="form-group flex-1">
+                    <label for="phone" class="form-label">Phone Number <span class="required">*</span></label>
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        name="phone" 
+                        value="{{ member.phone or '' }}" 
+                        placeholder="e.g. 9876543210" 
+                        class="form-control" 
+                        required
+                    >
+                    <small class="form-hint">10 to 15 digit mobile phone number for overdue notices.</small>
+                </div>
+
+                <!-- Email -->
+                <div class="form-group flex-1">
+                    <label for="email" class="form-label">Email Address <span class="required">*</span></label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        value="{{ member.email or '' }}" 
+                        placeholder="e.g. student@college.edu" 
+                        class="form-control" 
+                        required
+                    >
+                    <small class="form-hint">College or personal email address for notifications.</small>
+                </div>
+            </div>
+
+            <div class="form-actions-bar">
+                <button type="submit" class="btn btn-primary">
+                    <span class="btn-icon">💾</span> {{ action }} Member
+                </button>
+                <a href="{{ url_for('members_list') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+{% endblock %}

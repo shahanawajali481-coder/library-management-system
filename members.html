@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Members Directory{% endblock %}
+{% block page_name %}Members Management{% endblock %}
+
+{% block content %}
+<div class="members-page">
+
+    <!-- Top Action Header -->
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">Library Members Directory</h1>
+            <p class="page-subtitle">Manage registered students, faculty members, contact info, and active loans.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('add_member') }}" class="btn btn-primary">
+                <span class="btn-icon">➕</span> Add New Member
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="card toolbar-card">
+        <form method="GET" action="{{ url_for('members_list') }}" class="filter-toolbar-form">
+            <div class="search-input-group">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    name="q" 
+                    value="{{ search_query }}" 
+                    placeholder="Search by Name, Member ID, Phone, or Email..." 
+                    class="form-control search-input"
+                >
+                {% if search_query %}
+                    <a href="{{ url_for('members_list', sort=selected_sort) }}" class="clear-search-btn" title="Clear search">&times;</a>
+                {% endif %}
+            </div>
+
+            <div class="filter-select-group">
+                <label for="sortFilter" class="filter-label">Sort:</label>
+                <select name="sort" id="sortFilter" class="form-select" onchange="this.form.submit()">
+                    <option value="name" {% if selected_sort == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                    <option value="member_id" {% if selected_sort == 'member_id' %}selected{% endif %}>Member ID</option>
+                    <option value="email" {% if selected_sort == 'email' %}selected{% endif %}>Email</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            {% if search_query or selected_sort != 'name' %}
+                <a href="{{ url_for('members_list') }}" class="btn btn-outline">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Members Table Card -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">#</th>
+                        <th style="width: 130px;">Member ID</th>
+                        <th>Full Name</th>
+                        <th style="width: 160px;">Phone Number</th>
+                        <th style="width: 220px;">Email Address</th>
+                        <th style="width: 120px; text-align: center;">Active Loans</th>
+                        <th style="width: 220px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if members %}
+                        {% for member in members %}
+                        <tr>
+                            <td class="text-muted">{{ loop.index }}</td>
+                            <td>
+                                <code class="member-code-badge">{{ member.member_id }}</code>
+                            </td>
+                            <td>
+                                <div class="font-semibold member-name-cell">
+                                    <a href="{{ url_for('member_details', id=member.id) }}" class="member-detail-link">
+                                        {{ member.name }}
+                                    </a>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="phone-chip">📞 {{ member.phone }}</span>
+                            </td>
+                            <td>
+                                <span class="email-chip">✉️ {{ member.email }}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                {% if member.active_loans and member.active_loans > 0 %}
+                                    <span class="badge badge-warning">{{ member.active_loans }} checked out</span>
+                                {% else %}
+                                    <span class="badge badge-subtle">0 active</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="table-actions">
+                                    <a href="{{ url_for('member_details', id=member.id) }}" class="action-btn action-btn-view" title="View Member Profile & Loan History">
+                                        👁️ View
+                                    </a>
+                                    <a href="{{ url_for('issue_book', member_id=member.id) }}" class="action-btn action-btn-issue" title="Issue book to this member">
+                                        📤 Issue
+                                    </a>
+                                    <a href="{{ url_for('edit_member', id=member.id) }}" class="action-btn action-btn-edit" title="Edit Member Information">
+                                        ✏️ Edit
+                                    </a>
+                                    <button 
+                                        type="button" 
+                                        class="action-btn action-btn-delete" 
+                                        onclick="confirmDeleteMember('{{ member.id }}', '{{ member.name|replace('\'', '\\\'') }}', '{{ member.active_loans or 0 }}')"
+                                        title="Delete Member"
+                                    >
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <div class="empty-state">
+                                    <div class="empty-icon">👥</div>
+                                    <div class="empty-title">No members found</div>
+                                    <p class="empty-desc">
+                                        {% if search_query %}
+                                            No members matched your search criteria.
+                                        {% else %}
+                                            Start by registering the first library member.
+                                        {% endif %}
+                                    </p>
+                                    <a href="{{ url_for('add_member') }}" class="btn btn-primary mt-3">Register Member</a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Delete Member Script -->
+<script>
+function confirmDeleteMember(memberId, memberName, activeLoans) {
+    const modal = document.getElementById('genericModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const modalForm = document.getElementById('modalForm');
+
+    modalTitle.textContent = "Confirm Delete Member";
+
+    if (parseInt(activeLoans) > 0) {
+        modalBody.innerHTML = `<div class="alert alert-danger">
+            <strong>Action Blocked:</strong> Member "<strong>${memberName}</strong>" currently has 
+            <strong>${activeLoans} unreturned book(s)</strong> on loan.<br>
+            All borrowed books must be returned before deleting this member account.
+        </div>`;
+        document.getElementById('modalConfirmBtn').style.display = 'none';
+    } else {
+        modalBody.innerHTML = `Are you sure you want to delete member "<strong>${memberName}</strong>"?<br>This action cannot be undone.`;
+        document.getElementById('modalConfirmBtn').style.display = 'inline-block';
+    }
+
+    modalForm.action = `/members/${memberId}/delete`;
+    modal.style.display = 'flex';
+}
+</script>
+{% endblock %}

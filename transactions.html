@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions Log{% endblock %}
+{% block page_name %}Circulation Transactions{% endblock %}
+
+{% block content %}
+<div class="transactions-page">
+
+    <!-- Top Action Header -->
+    <div class="page-header">
+        <div class="header-titles">
+            <h1 class="page-title">Circulation Transactions History</h1>
+            <p class="page-subtitle">Complete ledger of book issues, returns, overdue periods, and fine receipts.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('export_transactions', type='Issued Books') }}" class="btn btn-secondary" title="Export CSV Report">
+                <span class="btn-icon">📥</span> Export CSV
+            </a>
+            <a href="{{ url_for('issue_book') }}" class="btn btn-primary">
+                <span class="btn-icon">📤</span> Issue Book
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="card toolbar-card">
+        <form method="GET" action="{{ url_for('transactions_list') }}" class="filter-toolbar-form">
+            <!-- Search Box -->
+            <div class="search-input-group">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    name="q" 
+                    value="{{ search_query }}" 
+                    placeholder="Search by Book Title, ISBN, Member Name, or Member ID..." 
+                    class="form-control search-input"
+                >
+                {% if search_query %}
+                    <a href="{{ url_for('transactions_list', status=status_filter) }}" class="clear-search-btn" title="Clear search">&times;</a>
+                {% endif %}
+            </div>
+
+            <!-- Status Filter Tabs / Select -->
+            <div class="filter-select-group">
+                <label for="statusFilter" class="filter-label">Status:</label>
+                <select name="status" id="statusFilter" class="form-select" onchange="this.form.submit()">
+                    <option value="All" {% if status_filter == 'All' %}selected{% endif %}>All Records</option>
+                    <option value="Issued" {% if status_filter == 'Issued' %}selected{% endif %}>Issued (Active)</option>
+                    <option value="Returned" {% if status_filter == 'Returned' %}selected{% endif %}>Returned (Closed)</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            {% if search_query or status_filter != 'All' %}
+                <a href="{{ url_for('transactions_list') }}" class="btn btn-outline">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Transactions Table Card -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">Tx ID</th>
+                        <th>Book Information</th>
+                        <th>Borrower</th>
+                        <th style="width: 120px;">Issue Date</th>
+                        <th style="width: 120px;">Due Date</th>
+                        <th style="width: 120px;">Return Date</th>
+                        <th style="width: 140px; text-align: center;">Status</th>
+                        <th style="width: 110px; text-align: right;">Fine Amount</th>
+                        <th style="width: 130px; text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if transactions %}
+                        {% for tx in transactions %}
+                        <tr>
+                            <td><span class="font-mono text-muted">#{{ tx.id }}</span></td>
+                            <td>
+                                <div class="font-semibold">{{ tx.book_title }}</div>
+                                <div class="text-muted"><small>ISBN: {{ tx.isbn }}</small></div>
+                            </td>
+                            <td>
+                                <div class="font-semibold">{{ tx.member_name }}</div>
+                                <div class="text-muted"><small>ID: {{ tx.member_code }}</small></div>
+                            </td>
+                            <td><span class="date-chip">{{ tx.issue_date }}</span></td>
+                            <td>
+                                <span class="date-chip {% if tx.is_overdue %}date-chip-overdue{% endif %}">
+                                    {{ tx.due_date }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if tx.return_date %}
+                                    <span class="date-chip">{{ tx.return_date }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center;">
+                                {% if tx.status == 'Issued' %}
+                                    {% if tx.is_overdue %}
+                                        <span class="badge badge-danger">Overdue ({{ tx.overdue_days }}d)</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">Issued</span>
+                                    {% endif %}
+                                {% elif tx.status == 'Returned' %}
+                                    <span class="badge badge-success">Returned</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ tx.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                {% if tx.current_fine and tx.current_fine > 0 %}
+                                    <span class="fine-badge">{{ currency_symbol }}{{ "%.2f"|format(tx.current_fine) }}</span>
+                                {% else %}
+                                    <span class="text-muted">₹0.00</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                {% if tx.status == 'Issued' %}
+                                    <button 
+                                        type="button" 
+                                        class="action-btn action-btn-return"
+                                        onclick="openReturnModal('{{ tx.id }}', '{{ tx.book_title|replace('\'', '\\\'') }}', '{{ tx.member_name|replace('\'', '\\\'') }}', '{{ tx.is_overdue }}', '{{ tx.overdue_days }}', '{{ tx.current_fine }}')"
+                                    >
+                                        📥 Return
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted text-sm">Archived</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📋</div>
+                                    <div class="empty-title">No transactions found</div>
+                                    <p class="empty-desc">
+                                        {% if search_query or status_filter != 'All' %}
+                                            No circulation records matched your search filters.
+                                        {% else %}
+                                            No book loan records have been created yet.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
