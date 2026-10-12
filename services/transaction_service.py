@@ -197,6 +197,50 @@ class TransactionService:
             conn.close()
 
     @staticmethod
+    def get_all_transactions(search_query: str = "", status: str = "All") -> List[Dict]:
+        """Fetch all transactions with optional search and status filtering ('All', 'Issued', 'Returned')."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            sql = """
+                SELECT t.id, t.book_id, t.member_id, t.issue_date, t.due_date, t.return_date, t.status, t.fine,
+                       b.title as book_title, b.isbn,
+                       m.name as member_name, m.member_id as member_code, m.phone
+                FROM transactions t
+                JOIN books b ON t.book_id = b.id
+                JOIN members m ON t.member_id = m.id
+                WHERE 1=1
+            """
+            params = []
+            if status and status != "All":
+                sql += " AND t.status = ?"
+                params.append(status)
+
+            if search_query and search_query.strip():
+                q = f"%{search_query.strip()}%"
+                sql += " AND (b.title LIKE ? OR b.isbn LIKE ? OR m.name LIKE ? OR m.member_id LIKE ?)"
+                params.extend([q, q, q, q])
+
+            sql += " ORDER BY t.id DESC"
+            cursor.execute(sql, params)
+            rows = [dict(r) for r in cursor.fetchall()]
+
+            for row in rows:
+                if row["status"] == "Issued":
+                    overdue_days, current_fine = TransactionService.calculate_fine(row["due_date"])
+                    row["overdue_days"] = overdue_days
+                    row["current_fine"] = current_fine
+                    row["is_overdue"] = overdue_days > 0
+                else:
+                    row["overdue_days"] = 0
+                    row["current_fine"] = row["fine"] or 0.0
+                    row["is_overdue"] = False
+
+            return rows
+        finally:
+            conn.close()
+
+    @staticmethod
     def get_dashboard_stats() -> Dict:
         """Calculate live summary counts and financial metrics for dashboard cards and charts."""
         conn = get_db_connection()

@@ -196,6 +196,7 @@ class TransactionService:
         finally:
             conn.close()
 
+    @staticmethod
     def get_all_transactions(search_query: str = "", status: str = "All") -> List[Dict]:
         """Fetch all transactions with optional search and status filtering ('All', 'Issued', 'Returned')."""
         conn = get_db_connection()
